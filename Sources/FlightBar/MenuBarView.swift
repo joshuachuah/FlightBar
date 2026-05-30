@@ -45,14 +45,8 @@ struct MenuBarView: View {
     }
 
     private var emptyState: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "airplane")
-                .foregroundColor(.secondary)
-
-            Text("No flights tracked")
-                .font(.caption)
-                .foregroundColor(.secondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        Text("No flights tracked")
+            .font(.caption)
+            .foregroundColor(.secondary)
     }
 }
