@@ -18,6 +18,9 @@ class FlightTracker: ObservableObject {
         if !trackedFlights.isEmpty {
             refreshAll()
         }
+        if trackedFlights.contains(where: \.isWatching) {
+            NotificationManager.shared.requestAuthorizationIfNeeded()
+        }
         restartWatchTimer()
     }
 
@@ -38,6 +41,9 @@ class FlightTracker: ObservableObject {
         let tracked = TrackedFlight(flightNumber: normalized, isWatching: watch)
         trackedFlights.append(tracked)
         saveFlights()
+        if watch {
+            NotificationManager.shared.requestAuthorizationIfNeeded()
+        }
         refreshFlight(tracked)
     }
 
@@ -53,6 +59,9 @@ class FlightTracker: ObservableObject {
         if let index = trackedFlights.firstIndex(where: { $0.id == tracked.id }) {
             trackedFlights[index].isWatching.toggle()
             saveFlights()
+            if trackedFlights[index].isWatching {
+                NotificationManager.shared.requestAuthorizationIfNeeded()
+            }
             restartWatchTimer()
         }
     }
@@ -90,8 +99,9 @@ class FlightTracker: ObservableObject {
             let oldStatus = flightData[tracked.id]?.status
             flightData[tracked.id] = flight
 
-            // Notify on status change
-            if let old = oldStatus, old != flight.status {
+            // Notify only for flights currently in watch mode.
+            let shouldNotify = trackedFlights.first { $0.id == tracked.id }?.isWatching == true
+            if shouldNotify, let old = oldStatus, old != flight.status {
                 NotificationManager.shared.sendStatusChange(
                     flight: flight,
                     oldStatus: old

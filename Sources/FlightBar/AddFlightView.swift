@@ -6,11 +6,24 @@ struct AddFlightView: View {
 
     @State private var flightNumber = ""
     @State private var watchMode = false
+    @State private var hasAPIKey = AviationStackClient.hasConfiguredAPIKey
 
     var body: some View {
         VStack(spacing: 14) {
             Text("Track a Flight")
                 .font(.headline)
+
+            if !hasAPIKey {
+                VStack(spacing: 8) {
+                    Label("AviationStack API key required", systemImage: "key")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    SettingsLink {
+                        Label("Settings...", systemImage: "gearshape")
+                    }
+                }
+            }
 
             TextField("Flight number (e.g. SQ321)", text: $flightNumber)
                 .textFieldStyle(.roundedBorder)
@@ -31,10 +44,16 @@ struct AddFlightView: View {
                     dismiss()
                 }
                 .keyboardShortcut(.defaultAction)
-                .disabled(flightNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .disabled(flightNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !hasAPIKey)
             }
         }
         .padding()
         .frame(width: 280)
+        .onAppear {
+            hasAPIKey = AviationStackClient.hasConfiguredAPIKey
+        }
+        .onReceive(NotificationCenter.default.publisher(for: APIKeyStore.didChangeNotification)) { _ in
+            hasAPIKey = AviationStackClient.hasConfiguredAPIKey
+        }
     }
 }

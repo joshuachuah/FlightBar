@@ -1,6 +1,6 @@
 import Foundation
 
-struct Flight: Codable, Identifiable, Equatable {
+struct Flight: Codable, Identifiable, Equatable, Sendable {
     let id: UUID
     let number: String          // Raw input (e.g. "SQ321")
     let flightIATA: String      // Normalized IATA code
@@ -173,7 +173,7 @@ struct Flight: Codable, Identifiable, Equatable {
     }
 }
 
-enum FlightStatus: String, Codable, CaseIterable {
+enum FlightStatus: String, Codable, CaseIterable, Sendable {
     case scheduled = "scheduled"
     case active = "active"
     case departed = "departed"
