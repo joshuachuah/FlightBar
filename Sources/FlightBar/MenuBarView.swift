@@ -3,6 +3,7 @@ import SwiftUI
 struct MenuBarView: View {
     @EnvironmentObject var tracker: FlightTracker
     @State private var showingAddSheet = false
+    @State private var hasAPIKey = AviationStackClient.hasConfiguredAPIKey
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -22,13 +23,20 @@ struct MenuBarView: View {
                     Label("Refresh All", systemImage: "arrow.clockwise")
                 }
                 .keyboardShortcut("r")
+                .disabled(!hasAPIKey || tracker.trackedFlights.isEmpty)
 
                 Spacer()
 
-                Button(action: { showingAddSheet = true }) {
-                    Label("Add Flight...", systemImage: "plus")
+                if hasAPIKey {
+                    Button(action: { showingAddSheet = true }) {
+                        Label("Add Flight...", systemImage: "plus")
+                    }
+                    .keyboardShortcut("n")
+                } else {
+                    SettingsLink {
+                        Label("Add API Key...", systemImage: "key")
+                    }
                 }
-                .keyboardShortcut("n")
             }
 
             Divider()
@@ -47,10 +55,16 @@ struct MenuBarView: View {
             AddFlightView()
                 .environmentObject(tracker)
         }
+        .onAppear {
+            hasAPIKey = AviationStackClient.hasConfiguredAPIKey
+        }
+        .onReceive(NotificationCenter.default.publisher(for: APIKeyStore.didChangeNotification)) { _ in
+            hasAPIKey = AviationStackClient.hasConfiguredAPIKey
+        }
     }
 
     private var emptyState: some View {
-        Text("No flights tracked")
+        Text(hasAPIKey ? "No flights tracked" : "AviationStack API key required")
             .font(.caption)
             .foregroundColor(.secondary)
     }

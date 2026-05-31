@@ -99,8 +99,9 @@ class FlightTracker: ObservableObject {
             let oldStatus = flightData[tracked.id]?.status
             flightData[tracked.id] = flight
 
-            // Notify on status change
-            if let old = oldStatus, old != flight.status {
+            // Notify only for flights currently in watch mode.
+            let shouldNotify = trackedFlights.first { $0.id == tracked.id }?.isWatching == true
+            if shouldNotify, let old = oldStatus, old != flight.status {
                 NotificationManager.shared.sendStatusChange(
                     flight: flight,
                     oldStatus: old

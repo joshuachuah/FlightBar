@@ -6,6 +6,7 @@ enum APIKeyStore {
 
     private static let service = "com.flightbar.app"
     private static let account = "aviationstack_api_key"
+    private static let legacyDefaultsKey = "aviationstack_api_key"
 
     static func load() throws -> String? {
         var query = baseQuery
@@ -23,7 +24,7 @@ enum APIKeyStore {
             }
             return key
         case errSecItemNotFound:
-            return nil
+            return try migrateLegacyDefaultsKey()
         default:
             throw APIKeyStoreError.unexpectedStatus(status)
         }
@@ -75,7 +76,29 @@ enum APIKeyStore {
     }
 
     private static func postChangeNotification() {
-        NotificationCenter.default.post(name: didChangeNotification, object: nil)
+        if Thread.isMainThread {
+            NotificationCenter.default.post(name: didChangeNotification, object: nil)
+        } else {
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(name: didChangeNotification, object: nil)
+            }
+        }
+    }
+
+    private static func migrateLegacyDefaultsKey() throws -> String? {
+        guard let key = UserDefaults.standard.string(forKey: legacyDefaultsKey) else {
+            return nil
+        }
+
+        let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            UserDefaults.standard.removeObject(forKey: legacyDefaultsKey)
+            return nil
+        }
+
+        try save(trimmed)
+        UserDefaults.standard.removeObject(forKey: legacyDefaultsKey)
+        return trimmed
     }
 }
 
