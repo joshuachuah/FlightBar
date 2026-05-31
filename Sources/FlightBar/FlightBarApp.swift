@@ -16,5 +16,9 @@ struct FlightBarApp: App {
             MenuBarView()
                 .environmentObject(tracker)
         }
+
+        Settings {
+            SettingsView()
+        }
     }
 }

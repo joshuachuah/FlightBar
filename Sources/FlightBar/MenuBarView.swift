@@ -33,6 +33,11 @@ struct MenuBarView: View {
 
             Divider()
 
+            SettingsLink {
+                Label("Settings...", systemImage: "gearshape")
+            }
+            .keyboardShortcut(",", modifiers: .command)
+
             Button("Quit FlightBar") {
                 NSApplication.shared.terminate(nil)
             }

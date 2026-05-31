@@ -1,12 +1,10 @@
 import Foundation
 
 actor AviationStackClient {
-    private let apiKey: String
     private let baseURL = "https://api.aviationstack.com/v1"
     private let session: URLSession
 
     init() {
-        self.apiKey = AviationStackClient.loadAPIKey()
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 15
         self.session = URLSession(configuration: config)
@@ -15,11 +13,12 @@ actor AviationStackClient {
     // MARK: - Fetch
 
     func fetchFlight(number: String) async throws -> Flight {
+        let apiKey = AviationStackClient.loadAPIKey()
         guard !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw AviationStackError.missingAPIKey
         }
 
-        let (data, urlResponse) = try await session.data(from: buildURL(number))
+        let (data, urlResponse) = try await session.data(from: buildURL(number, apiKey: apiKey))
         let decoder = JSONDecoder()
 
         if let httpResponse = urlResponse as? HTTPURLResponse,
@@ -46,7 +45,7 @@ actor AviationStackClient {
 
     // MARK: - URL Building
 
-    private func buildURL(_ flightNumber: String) -> URL {
+    private func buildURL(_ flightNumber: String, apiKey: String) -> URL {
         var components = URLComponents(string: "\(baseURL)/flights")!
         components.queryItems = [
             URLQueryItem(name: "access_key", value: apiKey),
@@ -135,15 +134,19 @@ actor AviationStackClient {
 
     // MARK: - API Key
 
+    static var hasConfiguredAPIKey: Bool {
+        !loadAPIKey().trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
     private static func loadAPIKey() -> String {
-        // Try environment variable first, then UserDefaults for local app runs.
+        if let key = try? APIKeyStore.load() {
+            return key
+        }
+
         if let key = ProcessInfo.processInfo.environment["AVIATIONSTACK_API_KEY"] {
             return key
         }
-        // Fallback: store in UserDefaults for development
-        if let key = UserDefaults.standard.string(forKey: "aviationstack_api_key") {
-            return key
-        }
+
         return ""
     }
 }
@@ -247,7 +250,7 @@ enum AviationStackError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .missingAPIKey:
-            return "Missing AviationStack API key. Set AVIATIONSTACK_API_KEY before launching FlightBar or save aviationstack_api_key in UserDefaults."
+            return "Add an AviationStack API key in Settings."
         case .notFound(let number): return "Flight \(number) not found"
         case .invalidAPIKey: return "Invalid AviationStack API key"
         case .rateLimited: return "API rate limit exceeded"
