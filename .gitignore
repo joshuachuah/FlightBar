@@ -6,8 +6,11 @@ project.yml
 *.swp
 Packages/
 Package.resolved
-.env
 .vscode/
+
+# Local secrets
+.env
+.env.local
 
 # Old Xcode scaffold (SwiftPM sources are in Sources/)
 /FlightBar/
