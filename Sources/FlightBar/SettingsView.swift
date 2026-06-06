@@ -1,34 +1,32 @@
 import SwiftUI
 
 struct SettingsView: View {
-    @State private var apiKey = ""
+    @State private var hasAPIKey = AviationStackClient.hasConfiguredAPIKey
     @State private var statusMessage: String?
     @State private var statusIsError = false
 
     var body: some View {
         Form {
             Section("AviationStack") {
-                SecureField("API key", text: $apiKey)
-                    .textFieldStyle(.roundedBorder)
+                Label(
+                    hasAPIKey ? "API key loaded" : "API key not found",
+                    systemImage: hasAPIKey ? "checkmark.circle" : "key"
+                )
+                .foregroundStyle(hasAPIKey ? .green : .secondary)
 
-                Text("Stored in macOS Keychain.")
+                Text("FlightBar reads `AVIATIONSTACK_API_KEY` from `.env` or the process environment.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
-                HStack {
-                    Button("Save") {
-                        saveAPIKey()
-                    }
-                    .keyboardShortcut(.defaultAction)
-                    .disabled(apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                Text(APIKeyStore.dotenvLocationsDescription)
+                    .font(.system(.caption2, design: .monospaced))
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
 
-                    Button("Remove") {
-                        removeAPIKey()
-                    }
-                    .disabled(apiKey.isEmpty)
-
-                    Spacer()
+                Button("Reload") {
+                    reloadAPIKey()
                 }
+                .keyboardShortcut(.defaultAction)
 
                 if let statusMessage {
                     Text(statusMessage)
@@ -39,41 +37,25 @@ struct SettingsView: View {
         }
         .formStyle(.grouped)
         .padding()
-        .frame(width: 460, height: 190)
+        .frame(width: 520, height: 260)
         .task {
-            loadAPIKey()
+            reloadAPIKey(showStatus: false)
         }
     }
 
-    private func loadAPIKey() {
+    private func reloadAPIKey(showStatus: Bool = true) {
         do {
-            apiKey = try APIKeyStore.load() ?? ""
+            _ = try APIKeyStore.load()
+            hasAPIKey = AviationStackClient.hasConfiguredAPIKey
+            APIKeyStore.reload()
+            if showStatus {
+                statusMessage = hasAPIKey ? "API key loaded." : "No API key found."
+                statusIsError = !hasAPIKey
+            }
         } catch {
-            showStatus(error.localizedDescription, isError: true)
+            hasAPIKey = false
+            statusMessage = error.localizedDescription
+            statusIsError = true
         }
-    }
-
-    private func saveAPIKey() {
-        do {
-            try APIKeyStore.save(apiKey)
-            showStatus("Saved.", isError: false)
-        } catch {
-            showStatus(error.localizedDescription, isError: true)
-        }
-    }
-
-    private func removeAPIKey() {
-        do {
-            try APIKeyStore.delete()
-            apiKey = ""
-            showStatus("Removed.", isError: false)
-        } catch {
-            showStatus(error.localizedDescription, isError: true)
-        }
-    }
-
-    private func showStatus(_ message: String, isError: Bool) {
-        statusMessage = message
-        statusIsError = isError
     }
 }
